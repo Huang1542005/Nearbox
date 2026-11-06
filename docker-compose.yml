@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nearbox}
+      POSTGRES_USER: ${POSTGRES_USER:-nearbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nearbox}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nearbox} -d ${POSTGRES_DB:-nearbox}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    environment:
+      DEBUG: ${DEBUG:-True}
+      SECRET_KEY: ${SECRET_KEY:-insecure-dev-key-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-nearbox}
+      POSTGRES_USER: ${POSTGRES_USER:-nearbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nearbox}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      RISK_FUND_RATE: ${RISK_FUND_RATE:-0.04}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+    volumes:
+      - .:/app
+      - media:/app/media
+      - static:/app/staticfiles
+    restart: unless-stopped
+
+  scheduler:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: ${DEBUG:-True}
+      SECRET_KEY: ${SECRET_KEY:-insecure-dev-key-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-nearbox}
+      POSTGRES_USER: ${POSTGRES_USER:-nearbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nearbox}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      RISK_FUND_RATE: ${RISK_FUND_RATE:-0.04}
+    entrypoint: ["bash", "/app/docker/scheduler.sh"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  media:
+  static:

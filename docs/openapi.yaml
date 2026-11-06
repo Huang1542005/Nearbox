@@ -1,0 +1,657 @@
+openapi: 3.0.3
+info:
+  title: NearBox MVP API
+  version: 1.0.0
+  description: >
+    API nền tảng chia sẻ và cho thuê đồ dùng ngang hàng (P2P) giữa cư dân
+    Vinhomes Grand Park (The Rainbow, The Origami).
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Máy chủ phát triển nội bộ
+paths:
+  /auth/request-otp/:
+    post:
+      summary: Yêu cầu gửi mã OTP qua số điện thoại
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: "0901000001"
+      responses:
+        "200":
+          description: Đã gửi mã OTP thành công
+  /auth/verify-otp/:
+    post:
+      summary: Xác thực mã OTP và nhận JWT tokens
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp]
+              properties:
+                phone:
+                  type: string
+                  example: "0901000001"
+                otp:
+                  type: string
+                  example: "000000"
+      responses:
+        "200":
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                  refresh:
+                    type: string
+  /auth/me/:
+    get:
+      summary: Lấy thông tin cá nhân của người dùng hiện tại
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Thông tin người dùng
+    patch:
+      summary: Cập nhật thông tin cá nhân (toà nhà, căn hộ)
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                building:
+                  type: string
+                unit_number:
+                  type: string
+      responses:
+        "200":
+          description: Đã cập nhật thành công
+  /auth/me/resident-proof/:
+    post:
+      summary: Tải lên minh chứng cư dân (hợp đồng, hóa đơn, thẻ cư dân)
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [resident_proof]
+              properties:
+                resident_proof:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Tải lên minh chứng thành công
+  /items/:
+    get:
+      summary: Danh sách sản phẩm cho thuê (ưu tiên cùng toà nhà)
+      tags: [Catalog]
+      parameters:
+        - in: query
+          name: building
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Danh sách sản phẩm
+    post:
+      summary: Đăng sản phẩm mới (chỉ dành cho cư dân đã xác minh)
+      tags: [Catalog]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, category, retail_price, daily_price, photo_1]
+              properties:
+                name:
+                  type: string
+                category:
+                  type: integer
+                retail_price:
+                  type: integer
+                daily_price:
+                  type: integer
+                description:
+                  type: string
+                photo_1:
+                  type: string
+                  format: binary
+                photo_2:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Đăng sản phẩm thành công
+  /items/{id}/:
+    get:
+      summary: Chi tiết sản phẩm
+      tags: [Catalog]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chi tiết sản phẩm
+  /items/price-suggestion/:
+    post:
+      summary: Gợi ý giá thuê và bậc tiền cọc tự động
+      tags: [Catalog]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [retail_price, category]
+              properties:
+                retail_price:
+                  type: integer
+                  example: 1200000
+                category:
+                  type: string
+                  example: "repair_tools"
+      responses:
+        "200":
+          description: Kết quả gợi ý giá và cảnh báo
+  /rental-requests/:
+    get:
+      summary: Danh sách yêu cầu cần thuê đồ
+      tags: [Catalog]
+      responses:
+        "200":
+          description: Danh sách yêu cầu
+    post:
+      summary: Đăng nhu cầu cần tìm thuê món đồ
+      tags: [Catalog]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, description]
+              properties:
+                category:
+                  type: integer
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Tạo yêu cầu thành công
+  /rental-requests/{id}/quotes/:
+    post:
+      summary: Báo giá cho một yêu cầu thuê đồ
+      tags: [Catalog]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item]
+              properties:
+                item:
+                  type: integer
+                message:
+                  type: string
+      responses:
+        "201":
+          description: Gửi báo giá thành công
+  /orders/:
+    get:
+      summary: Danh sách đơn thuê của tôi (vai trò người thuê hoặc chủ đồ)
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Danh sách đơn hàng
+    post:
+      summary: Tạo đơn thuê đồ mới
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item, rental_duration, pickup_slot, pickup_time]
+              properties:
+                item:
+                  type: integer
+                rental_duration:
+                  type: string
+                  enum: ["24h", "48h_weekend"]
+                pickup_slot:
+                  type: string
+                  enum: ["morning", "evening"]
+                pickup_time:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Đã tạo đơn hàng thành công kèm chi tiết thanh toán và mã QR
+  /orders/{id}/:
+    get:
+      summary: Chi tiết đơn thuê đồ
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chi tiết đơn hàng
+  /orders/{id}/approve/:
+    post:
+      summary: Chủ sản phẩm duyệt đơn thuê
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã duyệt đơn thành công
+  /orders/{id}/reject/:
+    post:
+      summary: Chủ sản phẩm từ chối đơn thuê
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã từ chối đơn thành công
+  /orders/{id}/confirm-payment-sent/:
+    post:
+      summary: Người thuê xác nhận đã gửi chuyển khoản
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã cập nhật nhật ký thanh toán
+  /orders/{id}/confirm-handover/:
+    post:
+      summary: Người thuê xác nhận nhận bàn giao đồ tại sảnh
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [liability_waiver_consent]
+              properties:
+                liability_waiver_consent:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Đã bàn giao thành công
+  /orders/{id}/cancel-at-lobby/:
+    post:
+      summary: Huỷ giao dịch tại sảnh (hoàn tiền 100%)
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã huỷ đơn tại sảnh và hoàn tiền
+  /orders/{id}/return/:
+    post:
+      summary: Người thuê trả đồ tại sảnh
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã gửi xác nhận trả đồ
+  /orders/{id}/confirm-return/:
+    post:
+      summary: Chủ đồ xác nhận nhận lại đồ (hoàn tất đơn, hoàn cọc 100%)
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hoàn tất đơn và giải phóng tiền cọc
+  /orders/{id}/open-dispute/:
+    post:
+      summary: Mở khiếu nại / tranh chấp
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        "200":
+          description: Đã mở khiếu nại thành công
+  /orders/{id}/photos/:
+    post:
+      summary: Tải lên ảnh đối chiếu bàn giao (Check-in / Check-out)
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo_type, image]
+              properties:
+                photo_type:
+                  type: string
+                  enum: [checkin, checkout]
+                image:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Tải ảnh thành công, server đã đóng dấu và băm SHA-256
+  /wallet/:
+    get:
+      summary: Xem số dư ví, thu nhập tháng và lịch sử giao dịch sổ cái
+      tags: [Wallet]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Thông tin ví và lịch sử
+  /admin/dashboard/:
+    get:
+      summary: Bảng điều khiển số liệu kinh doanh dành cho Concierge/Admin
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Số liệu KPI vận hành
+  /admin/residents/:
+    get:
+      summary: Danh sách cư dân cần duyệt minh chứng
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Danh sách cư dân
+  /admin/residents/{id}/approve/:
+    post:
+      summary: Duyệt xác minh cư dân
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã duyệt cư dân
+  /admin/residents/{id}/reject/:
+    post:
+      summary: Từ chối xác minh cư dân
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã từ chối xác minh
+  /admin/items/pending/:
+    get:
+      summary: Danh sách sản phẩm chờ duyệt đăng
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Danh sách sản phẩm chờ duyệt
+  /admin/items/pending/{id}/approve/:
+    post:
+      summary: Duyệt sản phẩm đăng
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã duyệt sản phẩm
+  /admin/items/pending/{id}/reject/:
+    post:
+      summary: Từ chối sản phẩm đăng
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã từ chối sản phẩm
+  /admin/orders/{id}/confirm-payment/:
+    post:
+      summary: Admin xác nhận đã nhận tiền chuyển khoản (giữ tiền vào Escrow)
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Đã xác nhận thanh toán
+  /admin/disputes/:
+    get:
+      summary: Danh sách tranh chấp cần giải quyết
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Danh sách tranh chấp
+  /admin/disputes/{id}/:
+    get:
+      summary: Chi tiết đối chiếu ảnh Check-in/Check-out của một tranh chấp
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chi tiết tranh chấp kèm URL ảnh và hash SHA-256
+  /admin/disputes/{id}/resolve/:
+    post:
+      summary: Giải quyết tranh chấp với 3 lựa chọn hoàn cọc / khấu trừ
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [full_refund, partial_deduction, full_deduction]
+                deducted_amount:
+                  type: integer
+                  description: Số tiền khấu trừ bồi thường chủ đồ (nếu là partial_deduction)
+                note:
+                  type: string
+      responses:
+        "200":
+          description: Đã giải quyết tranh chấp thành công
+  /admin/export/orders.csv:
+    get:
+      summary: Xuất danh sách toàn bộ đơn hàng dạng file CSV (hỗ trợ UTF-8 Excel)
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: File CSV đơn hàng
+  /admin/export/events.csv:
+    get:
+      summary: Xuất nhật ký sự kiện trạng thái đơn hàng dạng CSV
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: File CSV sự kiện
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

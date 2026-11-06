@@ -1,0 +1,363 @@
+{
+  "info": {
+    "name": "NearBox MVP API Collection",
+    "description": "Bộ sưu tập Postman đầy đủ cho NearBox P2P Item Rental Platform tại Vinhomes Grand Park.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0901000001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/request-otp/", "host": ["{{baseUrl}}"], "path": ["auth", "request-otp", ""] }
+          }
+        },
+        {
+          "name": "Verify OTP (Bypass code 000000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access) {",
+                  "  pm.collectionVariables.set('token', jsonData.access);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0901000001\",\n  \"otp\": \"000000\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/verify-otp/", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp", ""] }
+          }
+        },
+        {
+          "name": "Get Current User Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me/", "host": ["{{baseUrl}}"], "path": ["auth", "me", ""] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nguyễn Văn A\",\n  \"building\": \"S1\",\n  \"unit_number\": \"1204\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/me/", "host": ["{{baseUrl}}"], "path": ["auth", "me", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catalog",
+      "item": [
+        {
+          "name": "List Items (Same building first)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/items/?building=S1", "host": ["{{baseUrl}}"], "path": ["items", ""], "query": [{ "key": "building", "value": "S1" }] }
+          }
+        },
+        {
+          "name": "Get Item Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/items/1/", "host": ["{{baseUrl}}"], "path": ["items", "1", ""] }
+          }
+        },
+        {
+          "name": "Price & Deposit Tier Suggestion",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"retail_price\": 1200000,\n  \"category\": \"repair_tools\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/items/price-suggestion/", "host": ["{{baseUrl}}"], "path": ["items", "price-suggestion", ""] }
+          }
+        },
+        {
+          "name": "List Rental Requests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/rental-requests/", "host": ["{{baseUrl}}"], "path": ["rental-requests", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Orders Lifecycle",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item\": 1,\n  \"rental_duration\": \"24h\",\n  \"pickup_slot\": \"morning\",\n  \"pickup_time\": \"2026-11-07T08:00:00+07:00\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/", "host": ["{{baseUrl}}"], "path": ["orders", ""] }
+          }
+        },
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/orders/", "host": ["{{baseUrl}}"], "path": ["orders", ""] }
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/orders/1/", "host": ["{{baseUrl}}"], "path": ["orders", "1", ""] }
+          }
+        },
+        {
+          "name": "Owner Approve Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Đồng ý cho thuê\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/approve/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "approve", ""] }
+          }
+        },
+        {
+          "name": "Renter Confirm Payment Sent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Đã chuyển khoản theo cú pháp QR\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/confirm-payment-sent/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "confirm-payment-sent", ""] }
+          }
+        },
+        {
+          "name": "Upload Handover Photo (Checkin / Checkout)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "photo_type", "value": "checkin", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/orders/1/photos/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "photos", ""] }
+          }
+        },
+        {
+          "name": "Renter Confirm Handover (With Liability Waiver)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"liability_waiver_consent\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/1/confirm-handover/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "confirm-handover", ""] }
+          }
+        },
+        {
+          "name": "Renter Return Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Đã trả lại đồ tại sảnh\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/return/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "return", ""] }
+          }
+        },
+        {
+          "name": "Owner Confirm Return (Deposit Released 100%)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Đã nhận lại đồ đầy đủ\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/confirm-return/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "confirm-return", ""] }
+          }
+        },
+        {
+          "name": "Cancel at Lobby (100% Refund)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Không gặp được tại sảnh\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/cancel-at-lobby/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "cancel-at-lobby", ""] }
+          }
+        },
+        {
+          "name": "Open Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Sản phẩm bị nứt thân máy\"\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/1/open-dispute/", "host": ["{{baseUrl}}"], "path": ["orders", "1", "open-dispute", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Wallet",
+      "item": [
+        {
+          "name": "Get Wallet & Ledger History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/wallet/", "host": ["{{baseUrl}}"], "path": ["wallet", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin & Concierge",
+      "item": [
+        {
+          "name": "Dashboard KPI Metrics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/dashboard/", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard", ""] }
+          }
+        },
+        {
+          "name": "List Residents for Review",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/residents/?status=pending", "host": ["{{baseUrl}}"], "path": ["admin", "residents", ""], "query": [{ "key": "status", "value": "pending" }] }
+          }
+        },
+        {
+          "name": "Approve Resident Verification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/residents/1/approve/", "host": ["{{baseUrl}}"], "path": ["admin", "residents", "1", "approve", ""] }
+          }
+        },
+        {
+          "name": "Admin Confirm Order Payment (Hold Escrow)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/orders/1/confirm-payment/", "host": ["{{baseUrl}}"], "path": ["admin", "orders", "1", "confirm-payment", ""] }
+          }
+        },
+        {
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/disputes/", "host": ["{{baseUrl}}"], "path": ["admin", "disputes", ""] }
+          }
+        },
+        {
+          "name": "Get Dispute Detail (With Photos Side-by-Side)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/disputes/1/", "host": ["{{baseUrl}}"], "path": ["admin", "disputes", "1", ""] }
+          }
+        },
+        {
+          "name": "Resolve Dispute (Full / Partial / Full Deduct)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"partial_deduction\",\n  \"deducted_amount\": 150000,\n  \"note\": \"Bồi thường linh kiện bị gãy\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/admin/disputes/1/resolve/", "host": ["{{baseUrl}}"], "path": ["admin", "disputes", "1", "resolve", ""] }
+          }
+        },
+        {
+          "name": "Export Orders CSV",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/export/orders.csv", "host": ["{{baseUrl}}"], "path": ["admin", "export", "orders.csv"] }
+          }
+        },
+        {
+          "name": "Export Order Events CSV",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/export/events.csv", "host": ["{{baseUrl}}"], "path": ["admin", "export", "events.csv"] }
+          }
+        }
+      ]
+    }
+  ]
+}
